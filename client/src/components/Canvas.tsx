@@ -9,27 +9,43 @@ const Canvas: React.FC = () => {
 
 
   const startDrawing = (e: React.MouseEvent) => {
-    const canvas = canvasRef.current;
-    const ctx = canvas?.getContext('2d');
-    if (!ctx) return;
+  const canvas = canvasRef.current;
+  const ctx = canvas?.getContext('2d');
+  if (!ctx) return;
 
-    ctx.beginPath();
-    ctx.moveTo(e.nativeEvent.offsetX, e.nativeEvent.offsetY);
-    setIsDrawing(true);
-  };
+  const x = e.nativeEvent.offsetX;
+  const y = e.nativeEvent.offsetY;
+
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(x + 0.1, y + 0.1); // Mini-Linie → wirkt wie ein Punkt
+  ctx.strokeStyle = tool === 'eraser' ? '#FFFFFF' : color;
+  ctx.lineWidth = lineWidth+2;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+
+  setIsDrawing(true);
+};
+
 
   const draw = (e: React.MouseEvent) => {
-    if (!isDrawing) return;
-    const canvas = canvasRef.current;
-    const ctx = canvas?.getContext('2d');
-    if (!ctx) return;
+  if (!isDrawing) return;
 
-    ctx.lineTo(e.nativeEvent.offsetX, e.nativeEvent.offsetY);
-    ctx.strokeStyle = tool === 'eraser' ? '#FFFFFF' : color;
-    ctx.lineWidth = lineWidth;
-    ctx.lineCap = 'round';
-    ctx.stroke();
-  };
+  const canvas = canvasRef.current;
+  const ctx = canvas?.getContext('2d');
+  if (!ctx) return;
+
+  const x = e.nativeEvent.offsetX;
+  const y = e.nativeEvent.offsetY;
+
+  ctx.lineTo(x, y);
+  ctx.strokeStyle = tool === 'eraser' ? '#FFFFFF' : color;
+  ctx.lineWidth = lineWidth;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round'; // <— wichtig für weiche Übergänge!
+  ctx.stroke();
+};
+
 
   const stopDrawing = () => {
     setIsDrawing(false);
@@ -83,8 +99,8 @@ const Canvas: React.FC = () => {
 
       <canvas
         ref={canvasRef}
-        width={800}
-        height={600}
+        width={1280}
+        height={720}
         style={{ border: '1px solid black', background: '#fff' }}
         onMouseDown={startDrawing}
         onMouseMove={draw}
