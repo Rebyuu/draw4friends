@@ -18,7 +18,7 @@ const Canvas: React.FC = () => {
 
   ctx.beginPath();
   ctx.moveTo(x, y);
-  ctx.lineTo(x + 0.1, y + 0.1); // Mini-Linie → wirkt wie ein Punkt
+  ctx.lineTo(x + 0.1, y + 0.1); // Start with a tiny line to ensure the stroke is visible or create a dot
   ctx.strokeStyle = tool === 'eraser' ? '#FFFFFF' : color;
   ctx.lineWidth = lineWidth+2;
   ctx.lineCap = 'round';
@@ -26,7 +26,6 @@ const Canvas: React.FC = () => {
 
   setIsDrawing(true);
 };
-
 
   const draw = (e: React.MouseEvent) => {
   if (!isDrawing) return;
@@ -42,14 +41,18 @@ const Canvas: React.FC = () => {
   ctx.strokeStyle = tool === 'eraser' ? '#FFFFFF' : color;
   ctx.lineWidth = lineWidth;
   ctx.lineCap = 'round';
-  ctx.lineJoin = 'round'; // <— wichtig für weiche Übergänge!
+  ctx.lineJoin = 'round'; 
   ctx.stroke();
 };
 
-
   const stopDrawing = () => {
-    setIsDrawing(false);
-  };
+  setIsDrawing(false);
+  const canvas = canvasRef.current;
+  const ctx = canvas?.getContext('2d');
+  if (!ctx) return;
+
+  ctx.closePath();
+};
 
   const clearCanvas = () => {
     const canvas = canvasRef.current;
