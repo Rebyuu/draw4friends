@@ -8,6 +8,7 @@ const Canvas: React.FC = () => {
   const [color, setColor] = useState('#000000');
   const [lineWidth, setLineWidth] = useState(5);
   const [tool, setTool] = useState<'pen' | 'eraser'>('pen');
+  const [lastPoint, setLastPoint] = useState<{ x: number; y: number } | null>(null);
   const socketRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
@@ -26,10 +27,26 @@ const Canvas: React.FC = () => {
     const ctx = canvas?.getContext('2d');
     if (!ctx) return;
 
-    const handleMessage = (event: MessageEvent) => {
-      const { x, y, color: strokeColor, width } = JSON.parse(event.data);
 
-      ctx.lineTo(x, y);
+    /* --------------- draw incoming messages from the WebSocket ----------------- */
+    const handleMessage = async (event: MessageEvent) => {
+      const text = await event.data.text();
+      const msg = JSON.parse(text);
+      
+      const ctx = canvasRef.current?.getContext('2d');
+      const canvas = canvasRef.current;
+      if (!ctx || !canvas) return;
+
+      if (msg.type === 'clear') {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        return;
+      }
+
+      const { fromX, fromY, toX, toY, color: strokeColor, width } = msg;
+
+      ctx.beginPath();
+      ctx.moveTo(fromX, fromY);
+      ctx.lineTo(toX + 0.1, toY + 0.1); // Start with a tiny line to ensure the stroke is visible or create a dot from incoming data
       ctx.strokeStyle = strokeColor;
       ctx.lineWidth = width;
       ctx.lineCap = 'round';
@@ -37,11 +54,16 @@ const Canvas: React.FC = () => {
       ctx.stroke();
     };
 
-    socket.addEventListener('message', handleMessage);
+    const messageListener = (event: MessageEvent) => {
+      handleMessage(event);
+    };
+
+    socket.addEventListener('message', messageListener);
     return () => {
-      socket.removeEventListener('message', handleMessage);
+      socket.removeEventListener('message', messageListener);
     };
   }, []);
+
 
   /* ---------------- Drawing Logic ---------------- */
   const startDrawing = (e: React.MouseEvent) => {
@@ -61,6 +83,19 @@ const Canvas: React.FC = () => {
     ctx.stroke();
 
     setIsDrawing(true);
+    setLastPoint({ x, y });
+    //socket connection to send drawing data
+
+    socketRef.current?.send(
+      JSON.stringify({
+        fromX: x,
+        fromY: y,
+        toX: x + 0.1,
+        toY: y + 0.1,
+        color: tool === 'eraser' ? '#FFFFFF' : color,
+        width: lineWidth,
+      })
+    );
   };
 
   const draw = (e: React.MouseEvent) => {
@@ -72,7 +107,11 @@ const Canvas: React.FC = () => {
 
     const x = e.nativeEvent.offsetX;
     const y = e.nativeEvent.offsetY;
+    
+    if (!lastPoint) return;
 
+    ctx.beginPath();
+    ctx.moveTo(lastPoint.x, lastPoint.y);
     ctx.lineTo(x, y);
     ctx.strokeStyle = tool === 'eraser' ? '#FFFFFF' : color;
     ctx.lineWidth = lineWidth;
@@ -83,23 +122,28 @@ const Canvas: React.FC = () => {
     //socket connection to send drawing data
     socketRef.current?.send(
       JSON.stringify({
-        x: e.nativeEvent.offsetX,
-        y: e.nativeEvent.offsetY,
+        fromX: lastPoint.x,
+        fromY: lastPoint.y,
+        toX: e.nativeEvent.offsetX,
+        toY: e.nativeEvent.offsetY,
         color: tool === 'eraser' ? '#FFFFFF' : color,
         width: lineWidth,
       })
     );
+    setLastPoint({ x, y });
   };
 
   const stopDrawing = () => {
     setIsDrawing(false);
+    setLastPoint(null);
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext('2d');
     if (!ctx) return;
 
     ctx.closePath();
   };
-  
+
+
   /* ---------------- Tools ---------------- */
   const clearCanvas = () => {
     const canvas = canvasRef.current;
@@ -107,6 +151,8 @@ const Canvas: React.FC = () => {
     if (!ctx || !canvas) return;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    socketRef.current?.send(JSON.stringify({ type: 'clear' }));
   };
 
   const saveCanvas = () => {
