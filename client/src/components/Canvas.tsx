@@ -1,59 +1,106 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
+import { getSocket } from '../socket.ts';
 
+// Canvas component for drawing
 const Canvas: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [color, setColor] = useState('#000000');
   const [lineWidth, setLineWidth] = useState(5);
   const [tool, setTool] = useState<'pen' | 'eraser'>('pen');
+  const socketRef = useRef<WebSocket | null>(null);
 
+  useEffect(() => {
+    const socket = getSocket();
+    socketRef.current = socket;
 
+    socket.addEventListener('open', () => {
+      console.log('✅ WebSocket verbunden');
+    });
+
+    socket.addEventListener('close', () => {
+      console.log('🔴 WebSocket getrennt');
+    });
+
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext('2d');
+    if (!ctx) return;
+
+    const handleMessage = (event: MessageEvent) => {
+      const { x, y, color: strokeColor, width } = JSON.parse(event.data);
+
+      ctx.lineTo(x, y);
+      ctx.strokeStyle = strokeColor;
+      ctx.lineWidth = width;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.stroke();
+    };
+
+    socket.addEventListener('message', handleMessage);
+    return () => {
+      socket.removeEventListener('message', handleMessage);
+    };
+  }, []);
+
+  /* ---------------- Drawing Logic ---------------- */
   const startDrawing = (e: React.MouseEvent) => {
-  const canvas = canvasRef.current;
-  const ctx = canvas?.getContext('2d');
-  if (!ctx) return;
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext('2d');
+    if (!ctx) return;
 
-  const x = e.nativeEvent.offsetX;
-  const y = e.nativeEvent.offsetY;
+    const x = e.nativeEvent.offsetX;
+    const y = e.nativeEvent.offsetY;
 
-  ctx.beginPath();
-  ctx.moveTo(x, y);
-  ctx.lineTo(x + 0.1, y + 0.1); // Start with a tiny line to ensure the stroke is visible or create a dot
-  ctx.strokeStyle = tool === 'eraser' ? '#FFFFFF' : color;
-  ctx.lineWidth = lineWidth+2;
-  ctx.lineCap = 'round';
-  ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + 0.1, y + 0.1); // Start with a tiny line to ensure the stroke is visible or create a dot
+    ctx.strokeStyle = tool === 'eraser' ? '#FFFFFF' : color;
+    ctx.lineWidth = lineWidth+2;
+    ctx.lineCap = 'round';
+    ctx.stroke();
 
-  setIsDrawing(true);
-};
+    setIsDrawing(true);
+  };
 
   const draw = (e: React.MouseEvent) => {
-  if (!isDrawing) return;
+    if (!isDrawing) return;
 
-  const canvas = canvasRef.current;
-  const ctx = canvas?.getContext('2d');
-  if (!ctx) return;
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext('2d');
+    if (!ctx) return;
 
-  const x = e.nativeEvent.offsetX;
-  const y = e.nativeEvent.offsetY;
+    const x = e.nativeEvent.offsetX;
+    const y = e.nativeEvent.offsetY;
 
-  ctx.lineTo(x, y);
-  ctx.strokeStyle = tool === 'eraser' ? '#FFFFFF' : color;
-  ctx.lineWidth = lineWidth;
-  ctx.lineCap = 'round';
-  ctx.lineJoin = 'round'; 
-  ctx.stroke();
-};
+    ctx.lineTo(x, y);
+    ctx.strokeStyle = tool === 'eraser' ? '#FFFFFF' : color;
+    ctx.lineWidth = lineWidth;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round'; 
+    ctx.stroke();
+    
+    //socket connection to send drawing data
+    socketRef.current?.send(
+      JSON.stringify({
+        x: e.nativeEvent.offsetX,
+        y: e.nativeEvent.offsetY,
+        color: tool === 'eraser' ? '#FFFFFF' : color,
+        width: lineWidth,
+      })
+    );
+  };
 
   const stopDrawing = () => {
-  setIsDrawing(false);
-  const canvas = canvasRef.current;
-  const ctx = canvas?.getContext('2d');
-  if (!ctx) return;
+    setIsDrawing(false);
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext('2d');
+    if (!ctx) return;
 
-  ctx.closePath();
-};
-
+    ctx.closePath();
+  };
+  
+  /* ---------------- Tools ---------------- */
   const clearCanvas = () => {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext('2d');
