@@ -1,6 +1,15 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { getSocket } from '../socket.ts';
 
+type DrawCommand = {
+  fromX: number;
+  fromY: number;
+  toX: number;
+  toY: number;
+  color: string;
+  width: number;
+};
+
 // Canvas component for drawing
 const Canvas: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -30,20 +39,48 @@ const Canvas: React.FC = () => {
 
     /* --------------- draw incoming messages from the WebSocket ----------------- */
     const handleMessage = async (event: MessageEvent) => {
-      const text = await event.data.text();
+      let text: string;
+
+      if (typeof event.data === 'string') {
+        text = event.data;
+      } else if (event.data instanceof Blob) {
+        text = await event.data.text(); // Blob → Text
+      } else {
+        console.warn('Unsupported message format:', event.data);
+        return;
+      }
+
       const msg = JSON.parse(text);
       
       const ctx = canvasRef.current?.getContext('2d');
       const canvas = canvasRef.current;
       if (!ctx || !canvas) return;
 
+      // Clear functionality
       if (msg.type === 'clear') {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         return;
       }
 
-      const { fromX, fromY, toX, toY, color: strokeColor, width } = msg;
+      // Initialize canvas with existing drawings
+      if (msg.type === 'init' && Array.isArray(msg.data)) {
+        msg.data.forEach((entry: DrawCommand) => {
+          if (!entry.fromX || !entry.toX) return;
 
+          ctx.beginPath();
+          ctx.moveTo(entry.fromX, entry.fromY);
+          ctx.lineTo(entry.toX, entry.toY);
+          ctx.strokeStyle = entry.color;
+          ctx.lineWidth = entry.width;
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+          ctx.stroke();
+        });
+        return;
+      }
+
+      // Draw the line from the incoming message
+      const { fromX, fromY, toX, toY, color: strokeColor, width } = msg;
       ctx.beginPath();
       ctx.moveTo(fromX, fromY);
       ctx.lineTo(toX + 0.1, toY + 0.1); // Start with a tiny line to ensure the stroke is visible or create a dot from incoming data
@@ -94,6 +131,7 @@ const Canvas: React.FC = () => {
         toY: y + 0.1,
         color: tool === 'eraser' ? '#FFFFFF' : color,
         width: lineWidth,
+        save: true
       })
     );
   };
@@ -128,6 +166,7 @@ const Canvas: React.FC = () => {
         toY: e.nativeEvent.offsetY,
         color: tool === 'eraser' ? '#FFFFFF' : color,
         width: lineWidth,
+        save: true
       })
     );
     setLastPoint({ x, y });
@@ -166,6 +205,7 @@ const Canvas: React.FC = () => {
     link.click();
   };
 
+  /* ---------------- Render ---------------- */
   return (
     <div>
       <div style={{ marginBottom: '10px' }}>
