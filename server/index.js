@@ -1,6 +1,6 @@
 const WebSocket = require('ws');
 const fs = require('fs');
-const PORT = ProcessingInstruction.env.PORT || 3001;
+const PORT = process.env.PORT || 3001;
 const SAVE_PATH = './canvas_data.json';
 const wss = new WebSocket.Server({ port: PORT });
 
