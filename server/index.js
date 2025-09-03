@@ -4,7 +4,7 @@ const PORT = process.env.PORT || 3001;
 const SAVE_PATH = './canvas_data.json';
 const wss = new WebSocket.Server({ port: PORT });
 
-console.log('✅ WebSocket-Server läuft auf ws://localhost:3001');
+console.log('✅ WebSocket-Server läuft auf port ${PORT}');
 
 let clientCounter = 0;
 
