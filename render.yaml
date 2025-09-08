@@ -12,8 +12,9 @@ services:
   - type: web
     name: draw4friends-frontend
     runtime: static
-    plan: free
+    repo: https://github.com/Rebyuu/draw4friends
     rootDir: client
     buildCommand: npm install && npm run build
     staticPublishPath: dist
+    autoDeployTrigger: commit
 version: "1"
