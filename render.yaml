@@ -2,11 +2,13 @@ services:
   - type: web
     name: draw4friends-backend
     runtime: node
+    repo: https://github.com/Rebyuu/draw4friends
     plan: free
+    region: frankfurt
     rootDir: server
     buildCommand: npm install
     startCommand: npm start
-    healthCheckPath: /  # Optional: Reiner WebSocket-Server empfiehlt Option A (HTTP-Server + WS)
+    autoDeployTrigger: commit
   - type: web
     name: draw4friends-frontend
     runtime: static
@@ -14,3 +16,4 @@ services:
     rootDir: client
     buildCommand: npm install && npm run build
     staticPublishPath: dist
+version: "1"
