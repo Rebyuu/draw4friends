@@ -4,7 +4,9 @@ const PORT = process.env.PORT || 3001;
 const SAVE_PATH = './canvas_data.json';
 const wss = new WebSocket.Server({ port: PORT });
 
-console.log(`Server running on port ${PORT}`);
+server.listen(PORT, "0.0.0.0", () => {
+  console.log(`Server running on port ${PORT}`);
+});
 
 let clientCounter = 0;
 
