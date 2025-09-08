@@ -10,7 +10,7 @@ services:
     startCommand: npm start
     autoDeployTrigger: commit
   - type: web
-    name: draw4friends-frontend
+    name: draw4friends
     runtime: static
     repo: https://github.com/Rebyuu/draw4friends
     rootDir: client
