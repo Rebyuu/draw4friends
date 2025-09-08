@@ -2,11 +2,11 @@ const WebSocket = require('ws');
 const fs = require('fs');
 const PORT = process.env.PORT || 3001;
 const SAVE_PATH = './canvas_data.json';
-const wss = new WebSocket.Server({ port: PORT });
 
-server.listen(PORT, "0.0.0.0", () => {
-  console.log(`Server running on port ${PORT}`);
-});
+// Bind to 0.0.0.0 so Render can route traffic in
+const wss = new WebSocket.Server({ port: PORT, host: "0.0.0.0" });
+
+console.log(`WebSocket server running on port ${PORT}`);
 
 let clientCounter = 0;
 
