@@ -1,12 +1,16 @@
+const http = require("http");
 const WebSocket = require('ws');
 const fs = require('fs');
+
 const PORT = process.env.PORT || 3001;
 const SAVE_PATH = './canvas_data.json';
 
+const server = http.createServer((req, res) => {
+  res.writeHead(200);
+  res.end("WebSocket server is running\n");
+});
 // Bind to 0.0.0.0 so Render can route traffic in
-const wss = new WebSocket.Server({ port: PORT, host: "0.0.0.0" });
-
-console.log(`WebSocket server running on port ${PORT}`);
+const wss = new WebSocket.Server({ server });
 
 let clientCounter = 0;
 
@@ -45,6 +49,10 @@ wss.on('connection', (ws) => {
   ws.on('close', () => {
     console.log(`🔴 Client #${ws.id} getrennt`);
   });
+});
+
+server.listen(PORT, "0.0.0.0", () => {
+  console.log(`HTTP+WS server running on port ${PORT}`);
 });
 
 // Speicherung (anhängen an Datei)
